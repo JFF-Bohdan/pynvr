@@ -186,6 +186,61 @@ class MotionDetectorV3(MotionDetectorBase):
 
         return ret
 
+
+class MotionDetector(MotionDetectorBase):
+    def __init__(self):
+        MotionDetectorBase.__init__(self)
+
+        self.threshold = 1500
+        self.prevPrevFrame = None
+
+    def diffImg(self, t0, t1, t2):
+        if not self.multiFrameDetection:
+            return cv.absdiff(t2, t1)
+
+        d1 = cv.absdiff(t2, t1)
+        d2 = cv.absdiff(t1, t2)
+        return cv.bitwise_and(d1, d2)
+
+    def motionDetected(self, new_frame):
+        frame = self.preprocessInputFrame(new_frame)
+
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        gray = cv.GaussianBlur(gray, (11, 11), 0)
+
+        if (self.multiFrameDetection) and (self.prevPrevFrame is None):
+            self.prevPrevFrame = gray
+            return False
+
+        if self.prevFrame is None:
+            self.prevFrame = gray
+            return False
+
+        cv.normalize(gray, gray, 0, 255, cv.NORM_MINMAX)
+
+        frameDiff = self.diffImg(self.prevPrevFrame, self.prevFrame, gray)
+        ret1, th1 = cv.threshold(frameDiff, 10, 255, cv.THRESH_BINARY)
+
+        th1 = cv.dilate(th1, None, iterations=8)
+        th1 = cv.erode(th1, None, iterations=4)
+
+        delta_count = cv.countNonZero(th1)
+
+        if self.multiFrameDetection:
+            self.prevPrevFrame = self.prevFrame
+
+        self.prevFrame = gray
+        if delta_count < self.threshold:
+            return False
+
+        if self.multiFrameDetection:
+            self.prevPrevFrame = self.prevFrame
+
+        self.prevFrame = gray
+        self.updateMotionDetectionDts()
+        return True
+
+
 class MotionDetectorV3Traced(MotionDetectorBase):
     def __init__(self):
         MotionDetectorBase.__init__(self)
@@ -318,3 +373,5 @@ class MotionDetectorV4(MotionDetectorBase):
         self.updateMotionDetectionDts()
 
         return True
+
+
