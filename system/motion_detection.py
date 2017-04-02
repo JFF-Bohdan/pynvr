@@ -193,8 +193,16 @@ class MotionDetectorV3Traced(MotionDetectorBase):
         self.threshold = 1500
         self.prevPrevFrame = None
 
-    def diffImg(self, t0, t1, t2):
+        self.produceContoursFrame = False
+        self.contoursFrame = None
 
+        self.productDiffFrame1 = False
+        self.diffFrame1 = None
+
+        self.productDiffFrame2 = False
+        self.diffFrame2 = None
+
+    def diffImg(self, t0, t1, t2):
         if not self.multiFrameDetection:
             return cv.absdiff(t2, t1)
 
@@ -221,8 +229,14 @@ class MotionDetectorV3Traced(MotionDetectorBase):
         frameDiff = self.diffImg(self.prevPrevFrame, self.prevFrame, gray)
         ret1, th1 = cv.threshold(frameDiff, 10, 255, cv.THRESH_BINARY)
 
-        cv.dilate(th1, None, iterations=15)
-        cv.erode(th1, None, iterations=1)
+        if self.productDiffFrame1:
+            self.diffFrame1 = th1.copy()
+
+        th1 = cv.dilate(th1, None, iterations=8)
+        th1 = cv.erode(th1, None, iterations=4)
+
+        if self.productDiffFrame2:
+            self.diffFrame2 = th1.copy()
 
         delta_count = cv.countNonZero(th1)
 
@@ -233,14 +247,15 @@ class MotionDetectorV3Traced(MotionDetectorBase):
         if delta_count < self.threshold:
             return False
 
-        im2, contours, hierarchy = cv.findContours(th1, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        for c in contours:
-            cv.drawContours(frame, [c], 0, (0, 0, 255), 2)
+        if self.produceContoursFrame:
+            self.contoursFrame = frame.copy()
+
+            im2, contours, hierarchy = cv.findContours(th1, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+            for c in contours:
+                cv.drawContours(self.contoursFrame, [c], 0, (0, 0, 255), 2)
 
             # (x, y, w, h) = cv.boundingRect(c)
             # cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-        cv.imshow('frame_th1', frame)
 
         if self.multiFrameDetection:
             self.prevPrevFrame = self.prevFrame

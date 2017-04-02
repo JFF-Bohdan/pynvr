@@ -77,10 +77,19 @@ class MotionDetectionTester(CameraConnectionSupport):
         self.detector.resizeBeforeDetect = False
         self.detector.multiFrameDetection = False
 
+        self.detector.produceContoursFrame = True
+        self.detector.productDiffFrame1 = True
+        self.detector.productDiffFrame2 = True
+
+
         self.inMotionDetectedState = False
 
         self.__camConnectionDts = None
         self.__canDetectMotion = False
+
+        self.resultFrame = None
+
+
 
     def canDetectMotion(self):
         if self.__canDetectMotion:
@@ -104,6 +113,7 @@ class MotionDetectionTester(CameraConnectionSupport):
         """
         self.logger.info("main loop started")
 
+        emptyFrame = None
         while True:
             #initializing connection to camera
             if self.cap is None:
@@ -119,6 +129,8 @@ class MotionDetectionTester(CameraConnectionSupport):
             if (ret == False) or (current_frame is None): # the connection broke, or the stream came to an end
                 continue
 
+            current_frame = imutils.resize(current_frame, width=500, height=500)
+
             instant = time.time()  #get timestamp of the frame
 
             ############################################################
@@ -127,6 +139,15 @@ class MotionDetectionTester(CameraConnectionSupport):
 
             frameWidth = np.size(current_frame, 0)
             frameHeight = np.size(current_frame, 1)
+
+            if emptyFrame is None:
+                emptyFrame = np.zeros((frameHeight, frameWidth,3 ), np.uint8)
+
+            # if self.resultFrame is None
+            #     merged_frame = cv.mat((Size(640, 480), CV_8UC3);
+
+            if self.resultFrame is None:
+                self.resultFrame = np.zeros((frameHeight*2, frameWidth*2, 3), np.uint8)
 
             resolutionChanged = False
             if None in [self.frameWidth, self.frameHeight]:
@@ -181,7 +202,6 @@ class MotionDetectionTester(CameraConnectionSupport):
             ############################################################
             ############################################################
             ############################################################
-
             #adding label for frame with detected motion
             if motionDetected:
                 text = "MOTION DETECTED [{}]".format(dx)
@@ -195,8 +215,37 @@ class MotionDetectionTester(CameraConnectionSupport):
                     2
                 )
 
+                self.resultFrame = None
+                if self.detector.productDiffFrame1:
+                    frame = cv.cvtColor(self.detector.diffFrame1, cv.COLOR_GRAY2RGB)
+                    self.resultFrame = np.concatenate((current_frame, frame), axis=1)
+                else:
+                    self.resultFrame = np.concatenate((current_frame, emptyFrame), axis=1)
+
+                line2 = None
+                if self.detector.productDiffFrame2:
+                    line2 = cv.cvtColor(self.detector.diffFrame2, cv.COLOR_GRAY2RGB)
+                else:
+                    line2 = emptyFrame
+
+                if self.detector.produceContoursFrame:
+                    # frame = cv.cvtColor(self.detector.contoursFrame, cv.COLOR_GRAY2RGB)
+                    line2 = np.concatenate((line2, self.detector.contoursFrame), axis=1)
+                else:
+                    line2 = np.concatenate((line2, emptyFrame), axis=1)
+
+                self.resultFrame = np.concatenate((self.resultFrame, line2), axis=0)
+
+
+
+            # self.resultFrame =
+            # self.detector.productDiffFrame1
+            # if self.detector
+            # vis = np.concatenate((img1, img2), axis=0)
+
+
             #show current frame
-            cv.imshow('frame', current_frame)
+            cv.imshow('frame', self.resultFrame)
 
             #reading key and breaking loop when Esc or 'q' key pressed
             key = cv.waitKey(1)
