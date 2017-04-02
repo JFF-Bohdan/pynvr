@@ -93,3 +93,4 @@ ENV/
 /log
 cached_uglify
 .idea
+doc
