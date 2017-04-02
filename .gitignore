@@ -94,7 +94,6 @@ ENV/
 cached_uglify
 .idea
 doc
-video
 *.avi
 *.mpeg
 *.mp4
