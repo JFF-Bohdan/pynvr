@@ -87,3 +87,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+#project files
+/instance_uid.py
+/log
+cached_uglify
+.idea
