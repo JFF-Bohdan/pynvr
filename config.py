@@ -47,12 +47,21 @@ LOG_TO_CONSOLE = True
 INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 5
 MINIMAL_MOTION_DURATION = 10
 
+
+##########################
+### recording settings ###
+##########################
+PRE_ALARM_RECORDING_SECONDS = 5
+PATH_FOR_VIDEO = "./video"
+
 ##################################
 ### instance specific settings ###
 ##################################
 if INSTANCE_UID == JFF_DELL_LAPTOP_UID:
     #NOTE: Yes! I know that there is password from my dev. camera. It's OK
     cam = "rtsp://admin:fuTtJqR7@192.168.0.64:554/Streaming/channels/2/" #connection to my dev. camera
-    INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 0
+    MINIMAL_MOTION_DURATION = 5
+    # cam = 0
+    # INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 0
 
 

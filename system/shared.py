@@ -1,5 +1,6 @@
 import os
 import errno
+from config import APP_ROOT
 
 class LastErrorHolder:
     """
@@ -54,3 +55,20 @@ def mkdir_p_ex(path):
 def mkdir_p(path):
     (ok, stub) = mkdir_p_ex(path)
     return ok
+
+def makeAbsoluteAppPath(path, basePath = None):
+    """
+    Converts relative path to absolute.
+
+    :param path: relative path
+    :param basePath: base path (by default - current app directory)
+    :return: absolute path
+    """
+    if os.path.isabs(path):
+        return path
+
+    if basePath is None:
+        basePath = APP_ROOT
+
+    path = os.path.join(basePath, path)
+    return os.path.abspath(os.path.normpath(path))
