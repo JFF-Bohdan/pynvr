@@ -68,16 +68,14 @@ class CameraConnectionSupport(LastErrorHolder):
 
         return True
 
-
-# from datetime import timedelta
-
 class MotionDetectionTester(CameraConnectionSupport):
     def __init__(self, camConnectionString, logger):
         CameraConnectionSupport.__init__(self, camConnectionString, logger)
 
         #initializing motion detector
         self.detector = MotionDetectorV3Traced()
-        self.detector.resizeBeforeDetect = True
+        self.detector.resizeBeforeDetect = False
+        self.detector.multiFrameDetection = False
 
         self.inMotionDetectedState = False
 

@@ -18,6 +18,8 @@ class MotionDetectorBase(LastErrorHolder):
 
         self.resizeBeforeDetect = True
 
+        self.multiFrameDetection = False
+
     def preprocessInputFrame(self, newFrame):
         if self.resizeBeforeDetect:
             return imutils.resize(newFrame, width=500, height=500)
@@ -188,12 +190,16 @@ class MotionDetectorV3Traced(MotionDetectorBase):
     def __init__(self):
         MotionDetectorBase.__init__(self)
 
-        self.threshold = 2000
+        self.threshold = 1500
         self.prevPrevFrame = None
 
     def diffImg(self, t0, t1, t2):
+
+        if not self.multiFrameDetection:
+            return cv.absdiff(t2, t1)
+
         d1 = cv.absdiff(t2, t1)
-        d2 = cv.absdiff(t1, t0)
+        d2 = cv.absdiff(t1, t2)
         return cv.bitwise_and(d1, d2)
 
     def motionDetected(self, new_frame):
@@ -202,7 +208,7 @@ class MotionDetectorV3Traced(MotionDetectorBase):
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (11, 11), 0)
 
-        if self.prevPrevFrame is None:
+        if (self.multiFrameDetection) and (self.prevPrevFrame is None):
             self.prevPrevFrame = gray
             return False
 
@@ -220,7 +226,9 @@ class MotionDetectorV3Traced(MotionDetectorBase):
 
         delta_count = cv.countNonZero(th1)
 
-        self.prevPrevFrame = self.prevFrame
+        if self.multiFrameDetection:
+            self.prevPrevFrame = self.prevFrame
+
         self.prevFrame = gray
         if delta_count < self.threshold:
             return False
@@ -229,9 +237,14 @@ class MotionDetectorV3Traced(MotionDetectorBase):
         for c in contours:
             cv.drawContours(frame, [c], 0, (0, 0, 255), 2)
 
+            # (x, y, w, h) = cv.boundingRect(c)
+            # cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
         cv.imshow('frame_th1', frame)
 
-        self.prevPrevFrame = self.prevFrame
+        if self.multiFrameDetection:
+            self.prevPrevFrame = self.prevFrame
+
         self.prevFrame = gray
 
         self.updateMotionDetectionDts()
