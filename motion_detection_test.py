@@ -2,7 +2,7 @@ import cv2 as cv
 from system.log_support import init_logger
 from system.shared import LastErrorHolder
 import time
-from system.motion_detection import MotionDetectorV3Traced
+from system.motion_detection import *
 
 import config
 import datetime as dts
@@ -77,6 +77,7 @@ class MotionDetectionTester(CameraConnectionSupport):
 
         #initializing motion detector
         self.detector = MotionDetectorV3Traced()
+        self.detector.resizeBeforeDetect = True
 
         self.inMotionDetectedState = False
 

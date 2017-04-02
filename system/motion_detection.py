@@ -16,6 +16,14 @@ class MotionDetectorBase(LastErrorHolder):
         #DTS (date & time) of moment when last motion was detected
         self.motionDetectionDts = None
 
+        self.resizeBeforeDetect = True
+
+    def preprocessInputFrame(self, newFrame):
+        if self.resizeBeforeDetect:
+            return imutils.resize(newFrame, width=500, height=500)
+
+        return newFrame.copy()
+
     def checkMotionDetected(self, frame):
         """
         Checks that motion detected.
@@ -33,8 +41,9 @@ class MotionDetectorV1(MotionDetectorBase):
         MotionDetectorBase.__init__(self)
         self.threshold = 8
 
-    def motionDetected(self, frame):
-        frame = imutils.resize(frame, width=500, height=500)
+    def motionDetected(self, new_frame):
+        frame = self.preprocessInputFrame(new_frame)
+
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (21, 21), 0)
 
@@ -82,14 +91,14 @@ class MotionDetectorV1(MotionDetectorBase):
 
         return ret
 
-
 class MotionDetectorV2(MotionDetectorBase):
     def __init__(self):
         MotionDetectorBase.__init__(self)
         self.threshold = 1
 
-    def motionDetected(self, frame):
-        frame = imutils.resize(frame, width=500)
+    def motionDetected(self, new_frame):
+        frame = self.preprocessInputFrame(new_frame)
+
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (21, 21), 0)
 
@@ -139,8 +148,9 @@ class MotionDetectorV3(MotionDetectorBase):
         d2 = cv.absdiff(t1, t0)
         return cv.bitwise_and(d1, d2)
 
-    def motionDetected(self, frame):
-        frame = imutils.resize(frame, width=500, height=500)
+    def motionDetected(self, new_frame):
+        frame = self.preprocessInputFrame(new_frame)
+
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (11, 11), 0)
 
@@ -178,7 +188,7 @@ class MotionDetectorV3Traced(MotionDetectorBase):
     def __init__(self):
         MotionDetectorBase.__init__(self)
 
-        self.threshold = 1000
+        self.threshold = 2000
         self.prevPrevFrame = None
 
     def diffImg(self, t0, t1, t2):
@@ -186,8 +196,9 @@ class MotionDetectorV3Traced(MotionDetectorBase):
         d2 = cv.absdiff(t1, t0)
         return cv.bitwise_and(d1, d2)
 
-    def motionDetected(self, frame):
-        frame = imutils.resize(frame, width=500, height=500)
+    def motionDetected(self, new_frame):
+        frame = self.preprocessInputFrame(new_frame)
+
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (11, 11), 0)
 
@@ -239,8 +250,9 @@ class MotionDetectorV4(MotionDetectorBase):
         d2 = cv.absdiff(t1, t0)
         return cv.bitwise_and(d1, d2)
 
-    def motionDetected(self, frame):
-        frame = imutils.resize(frame, width=500, height=500)
+    def motionDetected(self, new_frame):
+        frame = self.preprocessInputFrame(new_frame)
+
         gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (11, 11), 0)
 

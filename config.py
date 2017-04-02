@@ -53,5 +53,6 @@ MINIMAL_MOTION_DURATION = 10
 if INSTANCE_UID == JFF_DELL_LAPTOP_UID:
     #NOTE: Yes! I know that there is password from my dev. camera. It's OK
     cam = "rtsp://admin:fuTtJqR7@192.168.0.64:554/Streaming/channels/2/" #connection to my dev. camera
+    INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 0
 
 
