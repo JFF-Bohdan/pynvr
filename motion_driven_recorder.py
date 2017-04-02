@@ -7,7 +7,6 @@ import numpy as np
 from system.camera_support import CameraConnectionSupport
 import os
 
-
 class MotionDrivenRecorder(CameraConnectionSupport):
     def __init__(self, camConnectionString, logger):
         CameraConnectionSupport.__init__(self, camConnectionString, logger)
@@ -32,6 +31,10 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         #output writer
         self.outputDirectory = None
         self.__output = None
+
+        self.subFolderNameGeneratorFunc = None
+        self.__prevSubFolder = None
+        self.scaleFrameTo = None
 
     def __addPreAlarmFrame(self, frame):
         if self.preAlarmRecordingSecondsQty == 0:
@@ -80,6 +83,12 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         self.__isRecording = False
 
+    def _getSubFolderName(self, dts):
+        if self.subFolderNameGeneratorFunc is None:
+            return None
+
+        return self.subFolderNameGeneratorFunc(dts)
+
     def _startRecording(self):
         if self.outputDirectory is None:
             return self.setError("output directory is not specified")
@@ -89,13 +98,28 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         # fourcc = cv.VideoWriter_fourcc(*'XVID')
         fourcc = cv.VideoWriter_fourcc('D','I','V','X') # MPEG-4 = MPEG-1
-
         videoSize = (self.frameWidth, self.frameHeight)
 
         #calculation output filename
         now = dts.datetime.utcnow()
         fileName = "video_{}.avi".format(now.strftime("%Y%m%dT%H%M%S"))
-        fileName = os.path.join(self.outputDirectory, fileName)
+
+        subFolder = self._getSubFolderName(now)
+        if subFolder is not None:
+            needCreate = ((self.__prevSubFolder is not None) or (subFolder != self.__prevSubFolder))
+
+            dirName = os.path.join(self.outputDirectory, subFolder)
+            dirName = os.path.normpath(dirName)
+
+            if (needCreate) and (not os.path.exists(dirName)):
+                self.logger.info("adding new directory: {}".format(dirName))
+                if not mkdir_p(dirName):
+                    return self.setError("can't create sub-directory: {}".format(dirName))
+
+            fileName = os.path.join(dirName, fileName)
+        else:
+            fileName = os.path.join(self.outputDirectory, fileName)
+
         self.__output = cv.VideoWriter(fileName, fourcc, 20.0, videoSize)
 
         self.__isRecording = True
@@ -137,7 +161,8 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             if (ret == False) or (current_frame is None): # the connection broke, or the stream came to an end
                 continue
 
-            current_frame = imutils.resize(current_frame, width=500)
+            if self.scaleFrameTo is not None:
+                current_frame = imutils.resize(current_frame, width=self.scaleFrameTo[0], height=self.scaleFrameTo[1])
 
             instant = time.time()  #get timestamp of the frame
 
@@ -211,7 +236,6 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 self._startRecording()
                 self._flushPreRecordingFrames()
 
-
             #calculating left seconds for motion (for further use in label)
             dx = 0
             if motionDetected:
@@ -278,6 +302,8 @@ def main():
     processor = MotionDrivenRecorder(config.cam, logger)
     processor.preAlarmRecordingSecondsQty = config.PRE_ALARM_RECORDING_SECONDS
     processor.outputDirectory = videoPath
+    processor.subFolderNameGeneratorFunc = config.subFolderNameGeneratorFunc
+    processor.scaleFrameTo = config.scaleFrameTo
 
     processor.loop()
 

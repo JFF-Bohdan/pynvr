@@ -47,12 +47,17 @@ LOG_TO_CONSOLE = True
 INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 5
 MINIMAL_MOTION_DURATION = 10
 
-
 ##########################
 ### recording settings ###
 ##########################
 PRE_ALARM_RECORDING_SECONDS = 5
 PATH_FOR_VIDEO = "./video"
+subFolderNameGeneratorFunc = None
+
+def subFolderNameForDts(dts):
+    return "{:04}/{:02}/{:02}".format(dts.year, dts.month, dts.day)
+
+scaleFrameTo = None
 
 ##################################
 ### instance specific settings ###
@@ -64,4 +69,6 @@ if INSTANCE_UID == JFF_DELL_LAPTOP_UID:
     # cam = 0
     # INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 0
 
+    subFolderNameGeneratorFunc = subFolderNameForDts
+    scaleFrameTo = (500, 500)
 
