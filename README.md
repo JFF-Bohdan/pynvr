@@ -27,7 +27,7 @@ Explanation:
 2. on **first processing stage** image converted to gray-scale and then blured using gaussian blur, then algorithm generates difference between current and previous frames;
 3. on **second processing stage** difference images goes through dilate() with 8 iterations and then through erode() with 4 iterations;
 4. next we need calculate non-zero (white) pixels count and decide if movement detected;
-5. then 
+5. next we looking for motion contours and add them to original frame.
 
 Script `motion_detection_test_with_contours.py` demonstrates internal mechanic of motion detection and merges images of all stages into one video stream, see details below.
 
@@ -72,7 +72,7 @@ INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 20
 
 In this case `INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS` will be **20**
 
-### Availiable parameters
+### Available parameters
 
 #### Camera connection string
 
@@ -150,7 +150,7 @@ video
 
 ####  `motion_detection_test_with_contours.py`
 
-Motion detection example with a lot of debug information: all internal mechanic availiable in merged output file.
+Motion detection example with a lot of debug information: all internal mechanic available in merged output file.
 
 
 #### `motion_detection_test.py`
