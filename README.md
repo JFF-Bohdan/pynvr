@@ -128,11 +128,11 @@ In this case video-archive will be something like this:
 ```
 video 
   |-2017-04-02
-  |  |-video_2017-04-02T132017.avi
-  |  |-video_2017-04-02T132017.avi
+     |-video_2017-04-02T132017.avi
+     |-video_2017-04-02T132017.avi
   |-2017-04-03
-  |  |-video_2017-04-03T132017.avi
-  |  |-video_2017-04-03T132017.avi
+     |-video_2017-04-03T132017.avi
+     |-video_2017-04-03T132017.avi
 ```
 
 ### Video settings
