@@ -89,7 +89,7 @@ ENV/
 .ropeproject
 
 #project files
-/instance_uid.py
+/machine_specific_configuration.py
 /log
 cached_uglify
 .idea

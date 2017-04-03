@@ -3,15 +3,6 @@ import logging
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-JFF_DELL_LAPTOP_UID = "5f5cd6de-05ff-43f4-89c5-8aaeecaa534c"
-DEFAULT_INSTANCE = "03a8624f-c620-4196-abd5-d27444b5d030"
-
-#loading instance UID
-if os.path.exists(os.path.join(APP_ROOT, "instance_uid.py")):
-    from instance_uid import INSTANCE_UID
-else:
-    INSTANCE_UID = DEFAULT_INSTANCE
-
 #######################
 ### camera settings ###
 #######################
@@ -33,7 +24,7 @@ APP_LOG_LEVEL = logging.DEBUG
 MAIN_LOG_FILE_MAX_SIZE = 1024*1024*32
 
 #max count for log files
-LOG_BACKUPS_COUNT      = 20
+LOG_BACKUPS_COUNT = 20
 
 #log format
 LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
@@ -54,21 +45,9 @@ PRE_ALARM_RECORDING_SECONDS = 5
 PATH_FOR_VIDEO = "./video"
 subFolderNameGeneratorFunc = None
 
-def subFolderNameForDts(dts):
-    return "{:04}/{:02}/{:02}".format(dts.year, dts.month, dts.day)
-
+#scaleFrameTo = (500, 500) #(width, height)
 scaleFrameTo = None
 
-##################################
-### instance specific settings ###
-##################################
-if INSTANCE_UID == JFF_DELL_LAPTOP_UID:
-    #NOTE: Yes! I know that there is password from my dev. camera. It's OK
-    cam = "rtsp://admin:fuTtJqR7@192.168.0.64:554/Streaming/channels/2/" #connection to my dev. camera
-    MINIMAL_MOTION_DURATION = 5
-    # cam = 0
-    # INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 0
-
-    subFolderNameGeneratorFunc = subFolderNameForDts
-    scaleFrameTo = (500, 500)
-
+#loading machine specific configuration
+if os.path.exists(os.path.join(APP_ROOT, "machine_specific_configuration.py")):
+    from machine_specific_configuration import *

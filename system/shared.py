@@ -72,3 +72,6 @@ def makeAbsoluteAppPath(path, basePath = None):
 
     path = os.path.join(basePath, path)
     return os.path.abspath(os.path.normpath(path))
+
+def subFolderNameForDtsGeneratorFunc(dts):
+    return "{:04}/{:02}/{:02}".format(dts.year, dts.month, dts.day)
