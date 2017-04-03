@@ -66,7 +66,6 @@ INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 5
 
 file `machine_specific_configuration.py`:
 ```Python
-```Python
 INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS = 20
 ```
 
@@ -119,7 +118,7 @@ Example:
 
 Example, sub-folders generator can be:
 
-```
+```Python
 def subFolderNameForDtsGeneratorFunc(dts):
     return "{:04}/{:02}/{:02}".format(dts.year, dts.month, dts.day)
 ```
