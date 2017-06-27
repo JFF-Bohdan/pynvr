@@ -15,7 +15,7 @@ def init_logger(mainLoggerName = __name__):
             print("ERROR INITIALIZING! Can't create directory for logs: '{}'".format(logsDirPath))
             exit(-1)
 
-    #create file handler
+    # create file handler
     handler = RotatingFileHandler(
         config.LOG_FILE_PATH,
         encoding="utf-8",

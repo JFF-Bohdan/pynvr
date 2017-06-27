@@ -53,8 +53,8 @@ class MotionDetectorV1(MotionDetectorBase):
             self.prevFrame = gray
             return False
 
-        #compute the absolute difference between the current frame and
-        #first frame
+        # compute the absolute difference between the current frame and
+        # first frame
         frameDelta = cv.absdiff(gray, self.prevFrame)
         thresh = cv.threshold(frameDelta, 25, 255, cv.THRESH_BINARY)[1]
 
@@ -363,8 +363,6 @@ class MotionDetectorV4(MotionDetectorBase):
 
         if totalArea < self.threshold:
             return False
-
-        print("totalArea = {}".format(totalArea))
 
         cv.imshow('frame_th1', frame)
 

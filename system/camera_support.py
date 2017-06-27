@@ -8,19 +8,19 @@ class CameraConnectionSupport(LastErrorHolder):
         LastErrorHolder.__init__(self)
         self.logger = logger
 
-        #date & time when class instance created
+        # date & time when class instance created
         self.started = dts.datetime.utcnow()
 
-        #camera
+        # camera
         self.cap = None
 
-        #frame height
+        # frame height
         self.frameHeight = None
 
-        #frame width
+        # frame width
         self.frameWidth = None
 
-        #total count of pixels
+        # total count of pixels
         self.nb_pixels = None
 
         self.camConnectionString = camConnectionString

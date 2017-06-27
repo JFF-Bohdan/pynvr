@@ -11,7 +11,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
     def __init__(self, camConnectionString, logger):
         CameraConnectionSupport.__init__(self, camConnectionString, logger)
 
-        #initializing motion detector
+        # initializing motion detector
         self.detector = MotionDetector()
         self.detector.resizeBeforeDetect = False
         self.detector.multiFrameDetection = False
@@ -28,7 +28,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         self.__isRecording = False
 
-        #output writer
+        # output writer
         self.outputDirectory = None
         self.__output = None
 
@@ -96,13 +96,12 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         if None in [self.frameWidth, self.frameHeight]:
             return self.setError("resolution is't specified")
 
-        # fourcc = cv.VideoWriter_fourcc(*'XVID')
-        fourcc = cv.VideoWriter_fourcc('D','I','V','X') # MPEG-4 = MPEG-1
+        fourcc = cv.VideoWriter_fourcc(*config.FOURCC_CODEC)
         videoSize = (self.frameWidth, self.frameHeight)
 
-        #calculation output filename
+        # calculation output filename
         now = dts.datetime.utcnow()
-        fileName = "video_{}.avi".format(now.strftime("%Y%m%dT%H%M%S"))
+        fileName = "video_{}{}".format(now.strftime("%Y%m%dT%H%M%S"), config.OUTPUT_FILES_EXTENSION)
 
         subFolder = self._getSubFolderName(now)
         if subFolder is not None:
@@ -120,7 +119,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         else:
             fileName = os.path.join(self.outputDirectory, fileName)
 
-        self.__output = cv.VideoWriter(fileName, fourcc, 20.0, videoSize)
+        self.__output = cv.VideoWriter(fileName, fourcc, config.OUTPUT_FRAME_RATE, videoSize)
 
         self.__isRecording = True
         return True
@@ -147,17 +146,17 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         emptyFrame = None
         while True:
-            #initializing connection to camera
+            # initializing connection to camera
             if self.cap is None:
                 if not self._initCamera():
                     continue
 
                 self.__camConnectionDts = self.utcNow()
 
-            #reading frames from camera
+            # reading frames from camera
             ret, current_frame = self.cap.read()
 
-            #if can't read current frame - going to the next loop
+            # if can't read current frame - going to the next loop
             if (ret == False) or (current_frame is None): # the connection broke, or the stream came to an end
                 continue
 
@@ -200,7 +199,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 resolutionChanged = ((self.frameWidth != frameWidth) or (self.frameHeight != frameHeight))
 
             if resolutionChanged:
-                #TODO: need process when recording now, or will be exception!
+                # TODO: need process when recording now, or will be exception!
                 self.onFrameSizeUpdate(frameWidth, frameHeight)
 
             ########################
@@ -208,7 +207,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             ########################
             motionDetected = False
 
-            #detection motion if can do it now
+            # detection motion if can do it now
             if self.canDetectMotion():
                 if self.detector.motionDetected(current_frame):
                     self.trigger_time = instant  # Update the trigger_time
@@ -220,13 +219,13 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                     self.inMotionDetectedState = True
 
             now = self.utcNow()
-            #prolongating motion for minimal motion duration
+            # prolongating motion for minimal motion duration
             if (not motionDetected) and (self.detector.motionDetectionDts is not None):
                 minDuration = self.detector.motionDetectionDts + dts.timedelta(seconds=config.MINIMAL_MOTION_DURATION)
                 if minDuration > now:
                     motionDetected = True
 
-            #clearing motion detection flag when needed
+            # clearing motion detection flag when needed
             if not motionDetected:
                 self.inMotionDetectedState = False
 
@@ -236,7 +235,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 self._startRecording()
                 self._flushPreRecordingFrames()
 
-            #calculating left seconds for motion (for further use in label)
+            # calculating left seconds for motion (for further use in label)
             dx = 0
             if motionDetected:
                 dx = now - self.detector.motionDetectionDts
@@ -244,7 +243,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             ############################################################
             ############################################################
             ############################################################
-            #adding label for frame with detected motion
+            # adding label for frame with detected motion
             if motionDetected:
                 text = "MOTION DETECTED [{}]".format(dx)
                 cv.putText(
@@ -260,15 +259,15 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             if self.__isRecording:
                 self._writeOutFrame(current_frame)
 
-            #show current frame
+            # show current frame
             cv.imshow('frame', current_frame)
 
-            #reading key and breaking loop when Esc or 'q' key pressed
+            # reading key and breaking loop when Esc or 'q' key pressed
             key = cv.waitKey(1)
             if (key & 0xFF == ord('q')) or (key == 27):
                 break
 
-        #stop recording if now recording
+        # stop recording if now recording
         if self.__isRecording:
             self._stopRecording()
 
