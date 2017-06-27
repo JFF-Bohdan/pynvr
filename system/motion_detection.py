@@ -4,16 +4,17 @@ import imutils
 import numpy as np
 import datetime
 
+
 class MotionDetectorBase(LastErrorHolder):
     """
     Base class for motion detection support
     """
     def __init__(self):
         LastErrorHolder.__init__(self)
-        #previous frame
+        # previous frame
         self.prevFrame = None
 
-        #DTS (date & time) of moment when last motion was detected
+        # DTS (date & time) of moment when last motion was detected
         self.motionDetectionDts = None
 
         self.resizeBeforeDetect = True
@@ -37,6 +38,7 @@ class MotionDetectorBase(LastErrorHolder):
 
     def updateMotionDetectionDts(self):
         self.motionDetectionDts = datetime.datetime.utcnow()
+
 
 class MotionDetectorV1(MotionDetectorBase):
     def __init__(self):
@@ -84,7 +86,7 @@ class MotionDetectorV1(MotionDetectorBase):
             qty += 1
             break
 
-        # cv.imshow('frame', frame)
+        # cv.imshow("frame", frame)
         self.prevFrame = gray
 
         ret = (qty > 0)
@@ -92,6 +94,7 @@ class MotionDetectorV1(MotionDetectorBase):
             self.updateMotionDetectionDts()
 
         return ret
+
 
 class MotionDetectorV2(MotionDetectorBase):
     def __init__(self):
@@ -112,8 +115,8 @@ class MotionDetectorV2(MotionDetectorBase):
 
         # kernel = np.ones((5, 5), np.uint8)
 
-        opening = cv.morphologyEx(frameDiff, cv.MORPH_OPEN, None)
-        closing = cv.morphologyEx(frameDiff, cv.MORPH_CLOSE, None)
+        opening = cv.morphologyEx(frameDiff, cv.MORPH_OPEN, None)  # noqa
+        closing = cv.morphologyEx(frameDiff, cv.MORPH_CLOSE, None)  # noqa
 
         ret1, th1 = cv.threshold(frameDiff, 10, 255, cv.THRESH_BINARY)
 
@@ -127,15 +130,14 @@ class MotionDetectorV2(MotionDetectorBase):
         self.prevFrame = gray
 
         # cv.DrawContours(currentframe, self.currentcontours, (0, 0, 255), (0, 255, 0), 1, 2, cv.CV_FILLED)
-        # cv.imshow('frame', current_frame)
+        # cv.imshow("frame", current_frame)
 
-
-        ret = avg > self.threshold  # If over the ceiling trigger the alarm
+        ret = avg > self.threshold   # If over the ceiling trigger the alarm
 
         if ret:
             self.updateMotionDetectionDts()
 
-        return  ret
+        return ret
 
 
 class MotionDetectorV3(MotionDetectorBase):
@@ -174,7 +176,7 @@ class MotionDetectorV3(MotionDetectorBase):
 
         delta_count = cv.countNonZero(th1)
 
-        cv.imshow('frame_th1', th1)
+        cv.imshow("frame_th1", th1)
 
         self.prevPrevFrame = self.prevFrame
         self.prevFrame = gray
@@ -364,12 +366,10 @@ class MotionDetectorV4(MotionDetectorBase):
         if totalArea < self.threshold:
             return False
 
-        cv.imshow('frame_th1', frame)
+        cv.imshow("frame_th1", frame)
 
         self.prevPrevFrame = self.prevFrame
         self.prevFrame = gray
         self.updateMotionDetectionDts()
 
         return True
-
-

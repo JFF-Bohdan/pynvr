@@ -3,6 +3,7 @@ from system.shared import LastErrorHolder
 import time
 import cv2 as cv
 
+
 class CameraConnectionSupport(LastErrorHolder):
     def __init__(self, camConnectionString, logger):
         LastErrorHolder.__init__(self)

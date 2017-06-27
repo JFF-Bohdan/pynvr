@@ -6,6 +6,7 @@ from logging.handlers import RotatingFileHandler
 import os
 import sys
 
+
 def init_logger(mainLoggerName = __name__):
     logger = logging.getLogger(mainLoggerName)
 

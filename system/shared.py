@@ -2,6 +2,7 @@ import os
 import errno
 from config import APP_ROOT
 
+
 class LastErrorHolder:
     """
     Support holding of last error
@@ -37,6 +38,7 @@ class LastErrorHolder:
         """
         return self.__hasError
 
+
 def mkdir_p_ex(path):
     try:
         if os.path.exists(path) and os.path.isdir(path):
@@ -44,7 +46,7 @@ def mkdir_p_ex(path):
 
         os.makedirs(path)
         return (True, None)
-    except OSError as exc: # Python >2.5
+    except OSError as exc:  # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             return (True, None)
         else:
@@ -52,9 +54,11 @@ def mkdir_p_ex(path):
     except Exception as e:
         return (False, str(e))
 
+
 def mkdir_p(path):
     (ok, stub) = mkdir_p_ex(path)
     return ok
+
 
 def makeAbsoluteAppPath(path, basePath = None):
     """
@@ -72,6 +76,7 @@ def makeAbsoluteAppPath(path, basePath = None):
 
     path = os.path.join(basePath, path)
     return os.path.abspath(os.path.normpath(path))
+
 
 def subFolderNameForDtsGeneratorFunc(dts):
     return "{:04}/{:02}/{:02}".format(dts.year, dts.month, dts.day)

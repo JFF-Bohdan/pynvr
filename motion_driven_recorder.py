@@ -1,11 +1,15 @@
 from system.log_support import init_logger
 import time
-from system.motion_detection import *
+import cv2 as cv
+from system.motion_detection import MotionDetector
+import imutils
 import config
 import datetime as dts
 import numpy as np
 from system.camera_support import CameraConnectionSupport
 import os
+from system.shared import makeAbsoluteAppPath, mkdir_p
+
 
 class MotionDrivenRecorder(CameraConnectionSupport):
     def __init__(self, camConnectionString, logger):
@@ -137,7 +141,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         self.__savedFrames = []
         return True
 
-    def loop(self):
+    def loop(self):  # noqa
         """
         Main loop for motion detection tester
         :return:
@@ -157,16 +161,17 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             ret, current_frame = self.cap.read()
 
             # if can't read current frame - going to the next loop
-            if (ret == False) or (current_frame is None): # the connection broke, or the stream came to an end
+            if (ret == False) or (current_frame is None):  # the connection broke, or the stream came to an end
                 continue
 
             if self.scaleFrameTo is not None:
                 current_frame = imutils.resize(current_frame, width=self.scaleFrameTo[0], height=self.scaleFrameTo[1])
 
-            instant = time.time()  #get timestamp of the frame
+            # get timestamp of the frame
+            instant = time.time()
 
             ############################################################
-            ### calculating width and height of current video stream ###
+            #   calculating width and height of current video stream   #
             ############################################################
 
             frameHeight = np.size(current_frame, 0)
@@ -177,13 +182,13 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 self.logger.info("FPS = {}".format(self.camFps))
 
             ############################################
-            ### adding frame to pre-recording buffer ###
+            #   adding frame to pre-recording buffer   #
             ############################################
             if self.preAlarmRecordingSecondsQty > 0:
                 self.__addPreAlarmFrame(current_frame)
 
             if emptyFrame is None:
-                emptyFrame = np.zeros((frameHeight, frameWidth,3 ), np.uint8)
+                emptyFrame = np.zeros((frameHeight, frameWidth, 3), np.uint8)
 
             resolutionChanged = False
             if None in [self.frameWidth, self.frameHeight]:
@@ -203,7 +208,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 self.onFrameSizeUpdate(frameWidth, frameHeight)
 
             ########################
-            ### detecting motion ###
+            #   detecting motion  #
             ########################
             motionDetected = False
 
@@ -240,9 +245,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             if motionDetected:
                 dx = now - self.detector.motionDetectionDts
                 dx = config.MINIMAL_MOTION_DURATION - dx.seconds
-            ############################################################
-            ############################################################
-            ############################################################
+
             # adding label for frame with detected motion
             if motionDetected:
                 text = "MOTION DETECTED [{}]".format(dx)
@@ -252,7 +255,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                     (10, 20),
                     cv.FONT_HERSHEY_SIMPLEX,
                     0.5,
-                    (0, 0, 255), #b g r
+                    (0, 0, 255),  # b g r
                     2
                 )
 
@@ -260,11 +263,11 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 self._writeOutFrame(current_frame)
 
             # show current frame
-            cv.imshow('frame', current_frame)
+            cv.imshow("frame", current_frame)
 
             # reading key and breaking loop when Esc or 'q' key pressed
             key = cv.waitKey(1)
-            if (key & 0xFF == ord('q')) or (key == 27):
+            if (key & 0xFF == ord("q")) or (key == 27):
                 break
 
         # stop recording if now recording
@@ -277,14 +280,13 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         cv.destroyAllWindows()
         self.logger.info("main loop finished")
 
-from system.shared import makeAbsoluteAppPath, mkdir_p
 
 def main():
     logger = init_logger()
     logger.info("app started")
 
     ###########################################
-    ### creating directory for output files ###
+    #   creating directory for output files  #
     ###########################################
     videoPath = config.PATH_FOR_VIDEO
     videoPath = makeAbsoluteAppPath(videoPath)
@@ -296,7 +298,7 @@ def main():
             return -1
 
     ##############################
-    ### initializing processor ###
+    #   initializing processor   #
     ##############################
     processor = MotionDrivenRecorder(config.cam, logger)
     processor.preAlarmRecordingSecondsQty = config.PRE_ALARM_RECORDING_SECONDS
@@ -309,7 +311,7 @@ def main():
     logger.info("app finished")
     return 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     ret = main()
     exit(ret)
-
