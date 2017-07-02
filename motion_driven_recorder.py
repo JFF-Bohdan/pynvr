@@ -52,7 +52,9 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             self.__savedFrames.append(frame)
             return
 
-        self.__savedFrames.pop(0)
+        if len(self.__savedFrames) > 0:
+            self.__savedFrames.pop(0)
+
         self.__savedFrames.append(frame)
 
     def canDetectMotion(self):
