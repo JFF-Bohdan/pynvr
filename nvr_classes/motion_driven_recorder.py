@@ -1,14 +1,24 @@
-from system.log_support import init_logger
+import os
+
 import time
 import cv2 as cv
 from system.motion_detection import MotionDetector
 import imutils
-import config
 import datetime as dts
 import numpy as np
 from system.camera_support import CameraConnectionSupport
-import os
-from system.shared import makeAbsoluteAppPath, mkdir_p
+import config
+from system.shared import mkdir_p
+import Queue
+import uuid
+
+
+class QueueCommand:
+    CMD_QUIT_THREAD = "quit"
+
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.uid = str(uuid.uuid4())
 
 
 class MotionDrivenRecorder(CameraConnectionSupport):
@@ -22,23 +32,33 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         self.inMotionDetectedState = False
 
-        self.__camConnectionDts = None
-        self.__canDetectMotion = False
+        self._camConnectionDts = None
+        self._canDetectMotion = False
         self.camFps = None
 
         self.preAlarmRecordingSecondsQty = 0
 
-        self.__savedFrames = []
+        self._savedFrames = []
 
-        self.__isRecording = False
+        self._isRecording = False
 
         # output writer
         self.outputDirectory = None
-        self.__output = None
+        self._output = None
 
         self.subFolderNameGeneratorFunc = None
-        self.__prevSubFolder = None
+        self._prevSubFolder = None
         self.scaleFrameTo = None
+
+
+        self._messages_queue = Queue.Queue()
+
+        self._quit = False
+
+    def add_stop_request(self):
+        cmd = QueueCommand(QueueCommand.CMD_QUIT_THREAD)
+        self.logger.info("adding quit command with uid = {}".format(cmd.uid))
+        self._messages_queue.put(cmd)
 
     def _addPreAlarmFrame(self, frame):
         if self.preAlarmRecordingSecondsQty == 0:
@@ -48,28 +68,28 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             return
 
         totalQty = int(self.preAlarmRecordingSecondsQty * self.camFps)
-        if len(self.__savedFrames) < totalQty:
-            self.__savedFrames.append(frame)
+        if len(self._savedFrames) < totalQty:
+            self._savedFrames.append(frame)
             return
 
-        if len(self.__savedFrames) > 0:
-            self.__savedFrames.pop(0)
+        if len(self._savedFrames) > 0:
+            self._savedFrames.pop(0)
 
-        self.__savedFrames.append(frame)
+        self._savedFrames.append(frame)
 
     def canDetectMotion(self):
-        if self.__canDetectMotion:
+        if self._canDetectMotion:
             return True
 
-        if self.__camConnectionDts is None:
+        if self._camConnectionDts is None:
             return False
 
-        minDts = self.__camConnectionDts + dts.timedelta(seconds=config.INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS)
+        minDts = self._camConnectionDts + dts.timedelta(seconds=config.INITIAL_WAIT_INTERVAL_BEFORE_MOTION_DETECTION_SECS)
 
         if minDts > self.utcNow():
             return False
 
-        self.__canDetectMotion = True
+        self._canDetectMotion = True
         return True
 
     def setError(self, errorText):
@@ -77,17 +97,17 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         return CameraConnectionSupport.setError(self, errorText)
 
     def _writeOutFrame(self, frame):
-        assert self.__output is not None
-        self.__output.write(frame)
+        assert self._output is not None
+        self._output.write(frame)
 
     def _stopRecording(self):
-        if self.__output is None:
+        if self._output is None:
             return
 
-        self.__output.release()
-        self.__output = None
+        self._output.release()
+        self._output = None
 
-        self.__isRecording = False
+        self._isRecording = False
 
     def _getSubFolderName(self, dts):
         if self.subFolderNameGeneratorFunc is None:
@@ -111,7 +131,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         subFolder = self._getSubFolderName(now)
         if subFolder is not None:
-            needCreate = ((self.__prevSubFolder is not None) or (subFolder != self.__prevSubFolder))
+            needCreate = ((self._prevSubFolder is not None) or (subFolder != self._prevSubFolder))
 
             dirName = os.path.join(self.outputDirectory, subFolder)
             dirName = os.path.normpath(dirName)
@@ -125,9 +145,9 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         else:
             fileName = os.path.join(self.outputDirectory, fileName)
 
-        self.__output = cv.VideoWriter(fileName, fourcc, config.OUTPUT_FRAME_RATE, videoSize)
+        self._output = cv.VideoWriter(fileName, fourcc, config.OUTPUT_FRAME_RATE, videoSize)
 
-        self.__isRecording = True
+        self._isRecording = True
         return True
 
     def _flushPreRecordingFrames(self):
@@ -135,15 +155,45 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         Writes pre-alarm frames to output file
         :return:
         """
-        assert self.__output is not None
+        assert self._output is not None
 
-        for frame in self.__savedFrames:
-            self.__output.write(frame)
+        for frame in self._savedFrames:
+            self._output.write(frame)
 
-        self.__savedFrames = []
+        self._savedFrames = []
         return True
 
-    def loop(self):  # noqa
+    def _detect_motion(self, current_frame, instant):
+        # detection motion if can do it now
+        if not self.canDetectMotion():
+            return False
+
+        if not self.detector.motionDetected(current_frame):
+            return False
+
+        self.trigger_time = instant  # Update the trigger_time
+
+        if not self.inMotionDetectedState:
+            self.logger.info("something moved!")
+
+        self.inMotionDetectedState = True
+        return True
+
+    def _process_queue_commands(self):
+        if self._messages_queue.empty():
+            return
+
+        cmd = self._messages_queue.get()
+        self.logger.info("got new command - {} [{}]".format(cmd.cmd, cmd.uid))
+
+        if cmd.cmd == QueueCommand.CMD_QUIT_THREAD:
+            self._quit = True
+            return
+
+        self.logger.error("unknown command: {} [{}]".format(cmd.cmd, cmd.uid))
+        raise Exception("Unknown command")
+
+    def start(self):  # noqa
         """
         Main loop for motion detection tester
         :return:
@@ -151,30 +201,47 @@ class MotionDrivenRecorder(CameraConnectionSupport):
         self.logger.info("main loop started")
 
         emptyFrame = None
-        while True:
+
+        prev_logged_left_seconds = None
+
+        bad_frames = 0
+
+        while not self._quit:
+            self._process_queue_commands()
+            if self._quit:
+                break
+
+            if bad_frames > 100:
+                if self.cap is not None:
+                    self.cap.release()
+                    self.cap = None
+                    bad_frames = 0
+
             # initializing connection to camera
             if self.cap is None:
+                self.logger.info("initializing connection to camera")
+
                 if not self._initCamera():
+                    self.logger.error("can't initialize connection to camera")
                     continue
 
-                self.__camConnectionDts = self.utcNow()
+                self._camConnectionDts = self.utcNow()
 
-            # reading frames from camera
             ret, current_frame = self.cap.read()
 
             # if can't read current frame - going to the next loop
-            if (ret == False) or (current_frame is None):  # the connection broke, or the stream came to an end
+            if (not ret) or (current_frame is None):  # the connection broke, or the stream came to an end
+                self.logger.warning("bad frame")
+                bad_frames += 1
                 continue
+            else:
+                bad_frames = 0
 
             if self.scaleFrameTo is not None:
                 current_frame = imutils.resize(current_frame, width=self.scaleFrameTo[0], height=self.scaleFrameTo[1])
 
             # get timestamp of the frame
             instant = time.time()
-
-            ############################################################
-            #   calculating width and height of current video stream   #
-            ############################################################
 
             frameHeight = np.size(current_frame, 0)
             frameWidth = np.size(current_frame, 1)
@@ -183,9 +250,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 self.camFps = self.cap.get(cv.CAP_PROP_FPS)
                 self.logger.info("FPS = {}".format(self.camFps))
 
-            ############################################
-            #   adding frame to pre-recording buffer   #
-            ############################################
+            # adding frame to pre-recording buffer
             if self.preAlarmRecordingSecondsQty > 0:
                 self._addPreAlarmFrame(current_frame)
 
@@ -209,21 +274,8 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                 # TODO: need process when recording now, or will be exception!
                 self.onFrameSizeUpdate(frameWidth, frameHeight)
 
-            ########################
-            #   detecting motion  #
-            ########################
-            motionDetected = False
-
-            # detection motion if can do it now
-            if self.canDetectMotion():
-                if self.detector.motionDetected(current_frame):
-                    self.trigger_time = instant  # Update the trigger_time
-
-                    if not self.inMotionDetectedState:
-                        self.logger.info("something moved!")
-
-                    motionDetected = True
-                    self.inMotionDetectedState = True
+            # detecting motion
+            motionDetected = self._detect_motion(current_frame, instant)
 
             now = self.utcNow()
             # prolongating motion for minimal motion duration
@@ -236,9 +288,12 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             if not motionDetected:
                 self.inMotionDetectedState = False
 
-                if self.__isRecording:
+                if self._isRecording:
+                    self.logger.info("stopping recording...")
                     self._stopRecording()
-            elif not self.__isRecording:
+
+            elif not self._isRecording:
+                self.logger.info("starting recording...")
                 self._startRecording()
                 self._flushPreRecordingFrames()
 
@@ -247,6 +302,10 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             if motionDetected:
                 dx = now - self.detector.motionDetectionDts
                 dx = config.MINIMAL_MOTION_DURATION - dx.seconds
+
+                if (prev_logged_left_seconds != dx):
+                    self.logger.info("left seconds for motion recording: {}".format(dx))
+                    prev_logged_left_seconds = dx
 
             # adding label for frame with detected motion
             if motionDetected:
@@ -261,19 +320,11 @@ class MotionDrivenRecorder(CameraConnectionSupport):
                     2
                 )
 
-            if self.__isRecording:
+            if self._isRecording:
                 self._writeOutFrame(current_frame)
 
-            # show current frame
-            cv.imshow("frame", current_frame)
-
-            # reading key and breaking loop when Esc or 'q' key pressed
-            key = cv.waitKey(1)
-            if (key & 0xFF == ord("q")) or (key == 27):
-                break
-
         # stop recording if now recording
-        if self.__isRecording:
+        if self._isRecording:
             self._stopRecording()
 
         if self.cap is not None:
@@ -281,39 +332,3 @@ class MotionDrivenRecorder(CameraConnectionSupport):
 
         cv.destroyAllWindows()
         self.logger.info("main loop finished")
-
-
-def main():
-    logger = init_logger()
-    logger.info("app started")
-
-    ###########################################
-    #   creating directory for output files  #
-    ###########################################
-    videoPath = config.PATH_FOR_VIDEO
-    videoPath = makeAbsoluteAppPath(videoPath)
-    if not os.path.exists(videoPath):
-        logger.info("making directory for output files: {}".format(videoPath))
-
-        if not mkdir_p(videoPath):
-            logger.error("can't create directory for output files")
-            return -1
-
-    ##############################
-    #   initializing processor   #
-    ##############################
-    processor = MotionDrivenRecorder(config.cam, logger)
-    processor.preAlarmRecordingSecondsQty = config.PRE_ALARM_RECORDING_SECONDS
-    processor.outputDirectory = videoPath
-    processor.subFolderNameGeneratorFunc = config.subFolderNameGeneratorFunc
-    processor.scaleFrameTo = config.scaleFrameTo
-
-    processor.loop()
-
-    logger.info("app finished")
-    return 0
-
-
-if __name__ == "__main__":
-    ret = main()
-    exit(ret)
