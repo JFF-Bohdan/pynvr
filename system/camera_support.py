@@ -53,13 +53,13 @@ class CameraConnectionSupport(LastErrorHolder):
             self.setError("can't connect to camera")
             if callSleep:
                 time.sleep(5)
-            return False
+            return None
 
         if not self.cap.isOpened():  # did we get a connection at all ?
             self.setError("can't connect to camera")
             if callSleep:
                 time.sleep(5)
 
-            return False
+            return None
 
-        return True
+        return self.cap

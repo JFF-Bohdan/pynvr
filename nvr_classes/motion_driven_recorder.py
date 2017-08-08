@@ -221,7 +221,7 @@ class MotionDrivenRecorder(CameraConnectionSupport):
             if self.cap is None:
                 self.logger.info("initializing connection to camera")
 
-                if not self._initCamera():
+                if self._initCamera() is None:
                     self.logger.error("can't initialize connection to camera")
                     continue
 
